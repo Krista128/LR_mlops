@@ -28,10 +28,33 @@ jobs:
           pip install flake8 black pytest
 
       - name: Check formatting
-        run: black --check src tests
+        run: black --check src tests notebooks
 
       - name: lint
         run: flake8 src tests
 
       - name: tests
         run: pytest tests
+
+      - name: Build predictor app image
+        run: docker build -t predictor-app:ci -f Dockerfile.predictor
+
+      - name: Run predictor app
+        run: docker run |
+          -d --name predictor-app \
+          -p 8000:8000 predictor-app:ci
+
+      - name: Wait for app
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs predictor-app
+          exit 1
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f predictor-app
