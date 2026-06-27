@@ -13,7 +13,7 @@ permissions:
   packages: write
 
 jobs:
-  push-tests:
+  base-tests:
     if: (github.event_name == 'push' && github.ref != 'refs/heads/main') || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
@@ -66,7 +66,7 @@ jobs:
         if: always()
         run: docker rm -f predictor-app
 
-  main-merge-tests:
+  prod-tests:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
