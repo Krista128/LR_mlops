@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: predictor
-        image: ghcr.io/Krista128/LR_mlops/predictor:latest
+        image: ghcr.io/krista128/lr_mlops/predictor-app:latest
         imagePullPolicy: Always
         ports:
          - containerPort: 8000
