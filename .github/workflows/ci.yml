@@ -99,13 +99,13 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build image
-        run: docker build -t ghcr.io/${{ github.repository }}/predictor-app:latest -f Dockerfile.predictor .
+        run: docker build -t ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/predictor-app:latest -f Dockerfile.predictor .
 
       - name: Run predictor app
         run: |
           docker run \
           -d --name predictor-app \
-          -p 8000:8000 ghcr.io/${{ github.repository }}/predictor-app:latest
+          -p 8000:8000 ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/predictor-app:latest
 
       - name: Wait for app
         run: |
@@ -123,11 +123,11 @@ jobs:
         run: docker rm -f predictor-app
 
       - name: Push image
-        run: docker push ghcr.io/${{ github.repository }}/predictor-app:latest
+        run: docker push ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/predictor-app:latest
 
       - name: Delete old package versions
         uses: actions/delete-package-versions@v5
         with:
-          package-name: ${{ github.event.repository.name }}/predictor-app
+          package-name: lr_mlops
           package-type: container
           min-versions-to-keep: 3
