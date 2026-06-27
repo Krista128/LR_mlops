@@ -13,7 +13,7 @@ permissions:
   packages: write
 
 jobs:
-  base-tests:
+  push-tests:
     if: (github.event_name == 'push' && github.ref != 'refs/heads/main') || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
@@ -66,7 +66,7 @@ jobs:
         if: always()
         run: docker rm -f predictor-app
 
-  prod-tests:
+  main-merge-tests:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
@@ -128,6 +128,6 @@ jobs:
       - name: Delete old package versions
         uses: actions/delete-package-versions@v5
         with:
-          package-name: lr_mlops/predictor-app
+          package-name: lr_mlops
           package-type: container
           min-versions-to-keep: 3
