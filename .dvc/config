@@ -1,0 +1,4 @@
+[core]
+    remote = yaremote
+['remote "yaremote"']
+    url = yadisk://dvc-storage-mlops-course

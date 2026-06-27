@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  push-tests:
+    if: (github.event_name == 'push' && github.ref != 'refs/heads/main') || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.7"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pip install flake8 black pytest
+
+      - name: Check formatting
+        run: black --check src tests notebooks
+
+      - name: lint
+        run: flake8 src tests
+
+      - name: tests
+        run: pytest tests
+
+      - name: Build predictor app image
+        run: docker build -t predictor-app:ci -f Dockerfile.predictor .
+
+      - name: Run predictor app
+        run: |
+          docker run \
+          -d --name predictor-app \
+          -p 8000:8000 predictor-app:ci
+
+      - name: Wait for app
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs predictor-app
+          exit 1
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f predictor-app
+
+  main-merge-tests:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.7"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pip install flake8 black pytest
+
+      - name: Check formatting
+        run: black --check src tests notebooks
+
+      - name: lint
+        run: flake8 src tests
+
+      - name: tests
+        run: pytest tests
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build image
+        run: docker build -t ghcr.io/${{ github.repository }}/predictor-app:latest -f Dockerfile.predictor .
+
+      - name: Run predictor app
+        run: |
+          docker run \
+          -d --name predictor-app \
+          -p 8000:8000 ghcr.io/${{ github.repository }}/predictor-app:latest
+
+      - name: Wait for app
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs predictor-app
+          exit 1
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f predictor-app
+
+      - name: Push image
+        run: docker push ghcr.io/${{ github.repository }}/predictor-app:latest
+
+      - name: Delete old package versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ github.event.repository.name }}/predictor-app
+          package-type: container
+          min-versions-to-keep: 3

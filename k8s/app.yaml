@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: empl-attr
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: empl-attr
+  name: predictors-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: predictor
+  template:
+    metadata:
+      labels:
+        app: predictor
+    spec:
+      containers:
+      - name: predictor
+        image: ghcr.io/Krista128/LR_mlops/predictor:latest
+        imagePullPolicy: Always
+        ports:
+         - containerPort: 8000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: empl-attr
+  name: predictor-service
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: predictor
+
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
