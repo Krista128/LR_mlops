@@ -1,10 +1,10 @@
 from setuptools import find_packages, setup
 
 setup(
-    name='src',
+    name="src",
     packages=find_packages(),
-    version='0.1.0',
-    description='Lab work by MLOps',
-    author='Kristina',
-    license='MIT',
+    version="0.1.0",
+    description="Lab work by MLOps",
+    author="Kristina",
+    license="MIT",
 )

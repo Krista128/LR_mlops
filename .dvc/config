@@ -1,4 +1,4 @@
 [core]
-    remote = myremote
-['remote "myremote"']
-    url = C:\Users\User\Documents\Yandex.Disk\DVC_storage
+    remote = yaremote
+['remote "yaremote"']
+    url = yadisk://dvc-storage-mlops-course
