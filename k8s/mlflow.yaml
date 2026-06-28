@@ -23,7 +23,7 @@ spec:
 
       containers:
         - name: mlflow
-          image: mlflow_image:0.2
+          image: mlflow_image:0.3
           imagePullPolicy: Never
           ports:
             - containerPort: 5000
