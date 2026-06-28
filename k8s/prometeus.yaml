@@ -11,15 +11,14 @@ data:
     scrape_configs:
       - job_name: "predictor-pods"
         metrics_path: /metrics
-
+        
         kubernetes_sd_configs:
           - role: endpoints
+            namespaces:
+              names:
+                - empl-attr
 
         relabel_configs:
-          - source_labels: [__meta_kubernetes_namespace]
-            action: keep
-            regex: empl-attr
-
           - source_labels: [__meta_kubernetes_service_name]
             action: keep
             regex: predictor-service
@@ -44,6 +43,16 @@ spec:
     spec:
       serviceAccountName: prometheus
 
+      volumes:
+      - name: prometheus-data
+        hostPath:
+          path: /mnt/storage/prometheus
+          type: DirectoryOrCreate
+
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+
       containers:
         - name: prometheus
           image: prom/prometheus:latest
@@ -59,10 +68,10 @@ spec:
             - name: prometheus-config
               mountPath: /etc/prometheus
 
-      volumes:
-        - name: prometheus-config
-          configMap:
-            name: prometheus-config
+            - name: prometheus-data
+              mountPath: /prometheus
+              readOnly: false
+
 
 ---
 apiVersion: v1

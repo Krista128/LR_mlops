@@ -1,7 +1,20 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from pydantic import BaseModel
+import os
+import time
+from prometheus_client import (
+    Counter, 
+    Histogram, 
+    generate_latest, 
+    CONTENT_TYPE_LATEST
+    )
 from src.models.predict_model import predictorClass
-from src.config import MLFLOW_TRACKING_URI, PIPELINE_SCHEMA_VERSION
+from src.app.db_querriees import db_connector
+from src.config import (
+    MLFLOW_TRACKING_URI, 
+    PIPELINE_SCHEMA_VERSION, 
+    POSTGRESS_URI
+    )
 import mlflow
 import requests
 import uvicorn
@@ -48,28 +61,30 @@ class PredictRequest(BaseModel):
 class PredictResponse(BaseModel):
     Attrition: int
 
+class test_model:
+    def __init__(self):
+        pass
+
+    def predict(self, x: any = None):
+        return {"Attrition": -100}
+
 
 @click.command()
 def main():
-    class test_model:
-        def __init__(self):
-            pass
+    mlflow_availibility = False
+    attempts = 0
+    while not mlflow_availibility and attempts < 12:
+        try:
+            requests.get(MLFLOW_TRACKING_URI, timeout=10.0)
+            mlflow_availibility = True
+        except requests.RequestException:
+            mlflow_availibility = False
+        attempts += 1
 
-        def predict(self, x: any = None):
-            return {"Attrition": -100}
-
-    mlflow_availibility = True
-    try:
-        requests.get(MLFLOW_TRACKING_URI, timeout=10.0)
-    except requests.RequestException:
-        print("MLflow server unavailible, cant load model")
-        print("App will start in test mode, without model")
-        status = "alive, in testing mode"
-        mlflow_availibility = False
-        predictor = test_model()
 
     if mlflow_availibility:
         mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+
         runs = mlflow.search_runs(
             search_all_experiments=True,
             filter_string=(
@@ -92,8 +107,52 @@ def main():
             model = mlflow.sklearn.load_model(model_uri)
             predictor = predictorClass(model=model)
             status = "alive"
+    else:
+        print("MLflow server unavailible, cant load model")
+        print("App will start in test mode, without model")
+        status = "alive, in testing mode"
+        predictor = test_model()
+    
+    db_availibility = False
+    attempts = 0
+    while not db_availibility and attempts < 12:
+        try:
+            requests.get(POSTGRESS_URI, timeout=10.0)
+            db_availibility = True
+        except requests.RequestException:
+            db_availibility = False
+        attempts += 1
+
+    if db_availibility:
+        host = os.getenv("DB_HOST")
+        db_name = os.getenv("POSTGRES_DB")
+        user = os.getenv("POSTGRES_USER")
+        password = os.getenv("POSTGRES_PASSWORD")
+        db_url = f"postgresql+psycopg2://{user}:{password}@{host}:7000/{db_name}"
+        postgres_connector = db_connector(db_url)
+    else:
+        print("Database unavailible")
+        print("App will start without saving predict results")
+        status = status + ", no connection to database"
+
+
+    predict_requests = Counter(
+        "predict_requests_total",
+        "Total number of predict requests"
+    )
+
+    predict_errors = Counter(
+        "predict_errors_total",
+        "Total number of failed predict requests"
+    )
+
+    predict_latency = Histogram(
+        "predict_latency_seconds",
+        "Predict request latency in seconds"
+    )
 
     app = FastAPI(title="attr_prediction_api")
+
 
     @app.get("/health")
     def health():
@@ -101,14 +160,35 @@ def main():
 
     @app.post("/predict", response_model=PredictResponse)
     def make_prediction(request: PredictRequest):
-        return predictor.predict(request.model_dump())
+        predict_requests.inc()
+        start = time.time()
+        try:
+            row = request.model_dump()
+            prediction = predictor.predict(row)
+            row["model_train_run_id"] = run_id
+            row["Attrition"] = prediction
+            if db_availibility:
+                postgres_connector.insert_history(row)
+            return prediction
+        except Exception:
+            predict_errors.inc()
+        finally:
+            predict_latency(time.time() - start)
 
+    @app.get("/metrics")
+    def metrics():
+        return Response(
+            content=generate_latest(),
+            media_type=CONTENT_TYPE_LATEST
+        )
+    
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=8000,
         reload=False,
     )
+
 
 
 if __name__ == "__main__":
