@@ -2,4 +2,13 @@
 PIPELINE_SCHEMA_VERSION = 2
 
 # MLlow adress
-MLFLOW_TRACKING_URI = "http://127.0.0.1:5000"
+MLFLOW_TRACKING_URI = "http://mlflow-service:5000"
+
+# Postgress adress
+POSTGRESS_URI = "http://postgres-service:7000"
+
+# Prometeus addres
+PROMETEUS_ADRESS = "http://prometheus-service:9090"
+
+# Grafana addres
+GRAFANA_ADRESS = "http://grafana-service:3000"
