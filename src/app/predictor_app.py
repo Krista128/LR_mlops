@@ -1,23 +1,16 @@
-from fastapi import (
-    FastAPI, 
-    Response, 
-    HTTPException
-)
+from fastapi import FastAPI, Response, HTTPException
 from pydantic import BaseModel
 import os
 import time
 from prometheus_client import (
-    Counter, 
-    Histogram, 
-    generate_latest, 
-    CONTENT_TYPE_LATEST
-    )
+    Counter,
+    Histogram,
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+)
 from src.models.predict_model import predictorClass
 from src.app.db_querriees import db_connector
-from src.config import (
-    MLFLOW_TRACKING_URI, 
-    PIPELINE_SCHEMA_VERSION
-    )
+from src.config import MLFLOW_TRACKING_URI, PIPELINE_SCHEMA_VERSION
 import mlflow
 import requests
 import uvicorn
@@ -64,6 +57,7 @@ class PredictRequest(BaseModel):
 class PredictResponse(BaseModel):
     Attrition: int
 
+
 class test_model:
     def __init__(self):
         pass
@@ -84,7 +78,6 @@ def main():
             mlflow_availibility = False
         time.sleep(10)
         attempts += 1
-
 
     if mlflow_availibility:
         mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
@@ -125,7 +118,9 @@ def main():
     user = os.getenv("POSTGRES_USER")
     password = os.getenv("POSTGRES_PASSWORD")
     db_port = os.getenv("DB_PORT")
-    db_url = f"postgresql+psycopg2://{user}:{password}@{host}:{db_port}/{db_name}"
+    db_url = (
+        f"postgresql+psycopg2://{user}:{password}@{host}:{db_port}/{db_name}"
+    )
     postgres_connector = db_connector(db_url)
 
     db_availibility = False
@@ -140,24 +135,19 @@ def main():
         print("App will start without saving predict results")
         status = status + ", no connection to database"
 
-
     predict_requests = Counter(
-        "predict_requests_total",
-        "Total number of predict requests"
+        "predict_requests_total", "Total number of predict requests"
     )
 
     predict_errors = Counter(
-        "predict_errors_total",
-        "Total number of failed predict requests"
+        "predict_errors_total", "Total number of failed predict requests"
     )
 
     predict_latency = Histogram(
-        "predict_latency_seconds",
-        "Predict request latency in seconds"
+        "predict_latency_seconds", "Predict request latency in seconds"
     )
 
     app = FastAPI(title="attr_prediction_api")
-
 
     @app.get("/health")
     def health():
@@ -185,10 +175,9 @@ def main():
     @app.get("/metrics")
     def metrics():
         return Response(
-            content=generate_latest(),
-            media_type=CONTENT_TYPE_LATEST
+            content=generate_latest(), media_type=CONTENT_TYPE_LATEST
         )
-    
+
     @app.get("/pull_new_model")
     def pull_new_model():
         nonlocal predictor, status
@@ -203,7 +192,6 @@ def main():
             time.sleep(10)
             attempts += 1
 
-
         if mlflow_availibility:
             mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
@@ -212,7 +200,8 @@ def main():
                 filter_string=(
                     "tags.production = 'True' AND "
                     "tags.model_saved = 'True' AND "
-                    f"tags.pipeline_schema_version = '{PIPELINE_SCHEMA_VERSION}'"
+                    "tags.pipeline_schema_version = "
+                    f"'{PIPELINE_SCHEMA_VERSION}'"
                 ),
                 order_by=["metrics.roc_auc DESC"],
                 max_results=1,
@@ -223,7 +212,7 @@ def main():
                 model_uri = f"runs:/{run_id}/model"
                 model = mlflow.sklearn.load_model(model_uri)
                 predictor = predictorClass(model=model)
-                
+
                 if ", no connection to database" in status:
                     status = "alive, no connection to database"
                 else:
@@ -233,7 +222,9 @@ def main():
                 print("App will use the old one")
         else:
             print(("MLflow server unavailible, cant load new model"))
-            print(f"({attempts} attempts to connect). App will use the old one")
+            print(
+                f"({attempts} attempts to connect). App will use the old one"
+            )
 
     uvicorn.run(
         app,
@@ -241,7 +232,6 @@ def main():
         port=8000,
         reload=False,
     )
-
 
 
 if __name__ == "__main__":

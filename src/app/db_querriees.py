@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine, text
 
 
-class db_connector():
-    def __init__(self, DB_URL : str):
+class db_connector:
+    def __init__(self, DB_URL: str):
         self.engine = create_engine(DB_URL)
 
     def connection_alive(self):
@@ -101,7 +101,7 @@ class db_connector():
             row_id = result.scalar_one()
             return row_id
 
-    def insert_train_history(self, row : dict):   
+    def insert_train_history(self, row: dict):
         with self.engine.begin() as conn:
             conn.execute(
                 text("""
@@ -121,7 +121,7 @@ class db_connector():
                 row,
             )
 
-    def insert_gt_labels(self, row: dict):   
+    def insert_gt_labels(self, row: dict):
         with self.engine.begin() as conn:
             conn.execute(
                 text("""
