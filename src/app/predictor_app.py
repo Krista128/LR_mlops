@@ -1,4 +1,8 @@
-from fastapi import FastAPI, Response
+from fastapi import (
+    FastAPI, 
+    Response, 
+    HTTPException
+)
 from pydantic import BaseModel
 import os
 import time
@@ -12,8 +16,7 @@ from src.models.predict_model import predictorClass
 from src.app.db_querriees import db_connector
 from src.config import (
     MLFLOW_TRACKING_URI, 
-    PIPELINE_SCHEMA_VERSION, 
-    POSTGRESS_URI
+    PIPELINE_SCHEMA_VERSION
     )
 import mlflow
 import requests
@@ -75,10 +78,11 @@ def main():
     attempts = 0
     while not mlflow_availibility and attempts < 12:
         try:
-            requests.get(MLFLOW_TRACKING_URI, timeout=10.0)
+            requests.get(MLFLOW_TRACKING_URI, timeout=2.0)
             mlflow_availibility = True
         except requests.RequestException:
             mlflow_availibility = False
+        time.sleep(10)
         attempts += 1
 
 
@@ -101,6 +105,7 @@ def main():
             print("App will start in test mode, without model")
             status = "alive, in testing mode"
             predictor = test_model()
+            run_id = "-100"
         else:
             run_id = runs.iloc[0]["run_id"]
             model_uri = f"runs:/{run_id}/model"
@@ -109,29 +114,29 @@ def main():
             status = "alive"
     else:
         print("MLflow server unavailible, cant load model")
+        print(f"({attempts} attempts to connect)")
         print("App will start in test mode, without model")
         status = "alive, in testing mode"
         predictor = test_model()
-    
+        run_id = "-100"
+
+    host = os.getenv("DB_HOST")
+    db_name = os.getenv("POSTGRES_DB")
+    user = os.getenv("POSTGRES_USER")
+    password = os.getenv("POSTGRES_PASSWORD")
+    db_port = os.getenv("DB_PORT")
+    db_url = f"postgresql+psycopg2://{user}:{password}@{host}:{db_port}/{db_name}"
+    postgres_connector = db_connector(db_url)
+
     db_availibility = False
     attempts = 0
     while not db_availibility and attempts < 12:
-        try:
-            requests.get(POSTGRESS_URI, timeout=10.0)
-            db_availibility = True
-        except requests.RequestException:
-            db_availibility = False
+        db_availibility = postgres_connector.connection_alive()
+        time.sleep(10)
         attempts += 1
 
-    if db_availibility:
-        host = os.getenv("DB_HOST")
-        db_name = os.getenv("POSTGRES_DB")
-        user = os.getenv("POSTGRES_USER")
-        password = os.getenv("POSTGRES_PASSWORD")
-        db_url = f"postgresql+psycopg2://{user}:{password}@{host}:7000/{db_name}"
-        postgres_connector = db_connector(db_url)
-    else:
-        print("Database unavailible")
+    if not db_availibility:
+        print(f"Database unavailible ({attempts} attempts to connect)")
         print("App will start without saving predict results")
         status = status + ", no connection to database"
 
@@ -166,14 +171,16 @@ def main():
             row = request.model_dump()
             prediction = predictor.predict(row)
             row["model_train_run_id"] = run_id
-            row["Attrition"] = prediction
+            row["Attrition"] = prediction["Attrition"]
             if db_availibility:
                 postgres_connector.insert_history(row)
             return prediction
-        except Exception:
+        except Exception as e:
             predict_errors.inc()
+            print(e)
+            raise HTTPException(status_code=500, detail=str(e))
         finally:
-            predict_latency(time.time() - start)
+            predict_latency.observe(time.time() - start)
 
     @app.get("/metrics")
     def metrics():
@@ -182,6 +189,52 @@ def main():
             media_type=CONTENT_TYPE_LATEST
         )
     
+    @app.get("/pull_new_model")
+    def pull_new_model():
+        nonlocal predictor, status
+        mlflow_availibility = False
+        attempts = 0
+        while not mlflow_availibility and attempts < 12:
+            try:
+                requests.get(MLFLOW_TRACKING_URI, timeout=10.0)
+                mlflow_availibility = True
+            except requests.RequestException:
+                mlflow_availibility = False
+            time.sleep(10)
+            attempts += 1
+
+
+        if mlflow_availibility:
+            mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+
+            runs = mlflow.search_runs(
+                search_all_experiments=True,
+                filter_string=(
+                    "tags.production = 'True' AND "
+                    "tags.model_saved = 'True' AND "
+                    f"tags.pipeline_schema_version = '{PIPELINE_SCHEMA_VERSION}'"
+                ),
+                order_by=["metrics.roc_auc DESC"],
+                max_results=1,
+            )
+
+            if len(runs) != 0:
+                run_id = runs.iloc[0]["run_id"]
+                model_uri = f"runs:/{run_id}/model"
+                model = mlflow.sklearn.load_model(model_uri)
+                predictor = predictorClass(model=model)
+                
+                if ", no connection to database" in status:
+                    status = "alive, no connection to database"
+                else:
+                    status = "alive"
+            else:
+                print("There are still no suitable model on MLflow server")
+                print("App will use the old one")
+        else:
+            print(("MLflow server unavailible, cant load new model"))
+            print(f"({attempts} attempts to connect). App will use the old one")
+
     uvicorn.run(
         app,
         host="0.0.0.0",

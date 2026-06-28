@@ -4,6 +4,9 @@ PIPELINE_SCHEMA_VERSION = 2
 # MLlow adress
 MLFLOW_TRACKING_URI = "http://mlflow-service:5000"
 
+# MLFLOW adress (local)
+MLFLOW_TRACKING_URI_LOCAL = "http://localhost:5000"
+
 # Postgress adress
 POSTGRESS_URI = "http://postgres-service:7000"
 

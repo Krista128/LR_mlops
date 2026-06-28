@@ -21,6 +21,15 @@ spec:
         #imagePullPolicy: Always
         ports:
          - containerPort: 8000
+        envFrom:
+          - configMapRef:
+              name: postgres-info
+        env:
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secrets
+                key: POSTGRES_PASSWORD
 
 ---
 

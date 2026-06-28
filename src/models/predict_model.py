@@ -24,4 +24,4 @@ class predictorClass:
         df = make_dummies(df)
         df = drop_features(df)
 
-        return {"Attrition": self.model.predict(df)[0]}
+        return {"Attrition": int(self.model.predict(df)[0])}

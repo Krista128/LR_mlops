@@ -5,6 +5,15 @@ class db_connector():
     def __init__(self, DB_URL : str):
         self.engine = create_engine(DB_URL)
 
+    def connection_alive(self):
+        try:
+            with self.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                return True
+        except Exception as e:
+            print(f"Database unavailable: {type(e).__name__}: {e}")
+            return False
+
     def insert_history(self, row: dict) -> int:
         with self.engine.begin() as conn:
             result = conn.execute(
