@@ -56,6 +56,7 @@ class PredictRequest(BaseModel):
 
 class PredictResponse(BaseModel):
     Attrition: int
+    Your_case_id: int
 
 
 class test_model:
@@ -163,7 +164,11 @@ def main():
             row["model_train_run_id"] = run_id
             row["Attrition"] = prediction["Attrition"]
             if db_availibility:
-                postgres_connector.insert_history(row)
+                prediction["Your_case_id"] = int(
+                    postgres_connector.insert_history(row)
+                )
+            else:
+                prediction["Your_case_id"] = -200
             return prediction
         except Exception as e:
             predict_errors.inc()

@@ -45,7 +45,10 @@ def get_git_info() -> dict[str, str]:
 
 
 def verify_model(
-    model: Pipeline | BaseEstimator, x_test: pd.DataFrame, y_test: pd.DataFrame
+    model: Pipeline | BaseEstimator,
+    x_test: pd.DataFrame,
+    y_test: pd.DataFrame,
+    verbose: bool = True,
 ) -> dict[str, float]:
     """
     evaluate model on given x_test dataset
@@ -61,8 +64,8 @@ def verify_model(
         / (precision[:-1] + recall[:-1] + 1e-10)
     )
     best_threshold = thresholds[np.argmax(f1_scores)]
-
-    print(f"Оптимальный порог по f1-score: {best_threshold:.4f}")
+    if verbose:
+        print(f"Оптимальный порог по f1-score: {best_threshold:.4f}")
 
     pred_binary = (pred_proba >= best_threshold).astype(int)
 
@@ -72,11 +75,11 @@ def verify_model(
     roc_auc = roc_auc_score(y_test, pred_proba)
     pr_auc = average_precision_score(y_test, pred_proba)
     conf_matrix = confusion_matrix(y_test, pred_binary)
-
-    print(f"F1 Score: {f1}")
-    print(f"ROC AUC: {roc_auc}")
-    print(f"PR AUC: {pr_auc}")
-    print(f"Confusion matrix: \n {conf_matrix}")
+    if verbose:
+        print(f"F1 Score: {f1}")
+        print(f"ROC AUC: {roc_auc}")
+        print(f"PR AUC: {pr_auc}")
+        print(f"Confusion matrix: \n {conf_matrix}")
 
     return {
         "f1_Score": f1,
