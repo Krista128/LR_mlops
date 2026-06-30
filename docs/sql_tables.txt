@@ -1,0 +1,65 @@
+CREATE TABLE history (
+    row_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    request_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    model_train_run_id TEXT NOT NULL,    
+    Attrition INT CHECK (Attrition IN (0, 1)),
+    Age INT,
+    BusinessTravel TEXT,
+    DailyRate INT,
+    Department TEXT,
+    DistanceFromHome INT,
+    Education INT,
+    EducationField TEXT,
+    EmployeeCount INT,
+    EmployeeNumber INT,
+    EnvironmentSatisfaction INT,
+    Gender TEXT,
+    HourlyRate INT,
+    JobInvolvement INT,
+    JobLevel INT,
+    JobRole TEXT,
+    JobSatisfaction INT,
+    MaritalStatus TEXT,
+    MonthlyIncome INT,
+    MonthlyRate INT,
+    NumCompaniesWorked INT,
+    Over18 TEXT,
+    OverTime TEXT,
+    PercentSalaryHike INT,
+    PerformanceRating INT,
+    RelationshipSatisfaction INT,
+    StandardHours INT,
+    StockOptionLevel INT,
+    TotalWorkingYears INT,
+    TrainingTimesLastYear INT,
+    WorkLifeBalance INT,
+    YearsAtCompany INT,
+    YearsInCurrentRole INT,
+    YearsSinceLastPromotion INT,
+    YearsWithCurrManager INT
+);
+
+CREATE TABLE gt_labels (
+	row_id INT NOT NULL,
+	insert_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	GT_Attrition INT NOT NULL CHECK (GT_Attrition IN (0, 1))
+);
+
+CREATE TABLE train_history (
+	model_train_run_id TEXT NOT NULL,
+	row_id INT NOT NULL,
+	pipeline_shema_version INT NOT NULL,
+	data_part TEXT NOT NULL CHECK (data_part IN ('train', 'val', 'test'))
+)
+
+
+CREATE TABLE drift (
+	window_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	w_start INT NOT NULL,
+	w_stop INT NOT NULL,
+	run_id TEXT NOT NULL,
+	data_drift BOOL,
+	target_drift BOOL,
+	concept_drift BOOL,
+	trained BOOL NOT NULL
+)
