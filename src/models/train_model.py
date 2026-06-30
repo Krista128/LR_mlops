@@ -186,7 +186,7 @@ def train_model(
     experiment_name: str,
     repeats: int = 1,
     **params_to_log,
-):
+) -> str:
     """
     models: must be an iterable object of models to train
 
@@ -232,13 +232,14 @@ def train_model(
                     mlflow.log_metric(param, metrics_to_log[param])
 
                 for param in params_to_log:
-                    mlflow.log_param(param, params_to_log[param])
+                    mlflow.set_tag(param, params_to_log[param])
 
                 mlflow.log_params(model.get_params())
 
     with mlflow.start_run(run_id=best_run_id):
         mlflow.sklearn.log_model(best_model, name="model")
         mlflow.set_tag("model_saved", True)
+    return best_run_id
 
 
 @click.command()

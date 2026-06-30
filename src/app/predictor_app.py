@@ -69,6 +69,7 @@ class test_model:
 
 @click.command()
 def main():
+    run_id = "loading"
     mlflow_availibility = False
     attempts = 0
     while not mlflow_availibility and attempts < 12:
@@ -152,7 +153,7 @@ def main():
 
     @app.get("/health")
     def health():
-        return {"status": status}
+        return {"status": status, "run_id": run_id}
 
     @app.post("/predict", response_model=PredictResponse)
     def make_prediction(request: PredictRequest):

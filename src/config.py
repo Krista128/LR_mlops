@@ -15,3 +15,5 @@ PROMETEUS_ADRESS = "http://prometheus-service:9090"
 
 # Grafana addres
 GRAFANA_ADRESS = "http://grafana-service:3000"
+
+PREDICTOR_ADRESS = "http://predictor-service:8000"
