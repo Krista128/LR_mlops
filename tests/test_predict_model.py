@@ -1,18 +1,18 @@
 from src.models.predict_model import predictorClass
-from src.config import MLFLOW_TRACKING_URI, PIPELINE_SCHEMA_VERSION
+from src.config import MLFLOW_TRACKING_URI_LOCAL, PIPELINE_SCHEMA_VERSION
 import mlflow
 import requests
 
 
 def test_predictorClass():
     try:
-        requests.get(MLFLOW_TRACKING_URI, timeout=10.0)
+        requests.get(MLFLOW_TRACKING_URI_LOCAL, timeout=10.0)
     except requests.RequestException:
         print("MLflow server unavailible, ", end="")
         print("predictorClass tests are skipped")
         return None
 
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI_LOCAL)
     runs = mlflow.search_runs(
         search_all_experiments=True,
         filter_string=f"tags.pipeline_schema_version = \
@@ -110,3 +110,7 @@ def test_predictorClass():
 
         ans2 = predictor.predict(test_request2)
         assert ans2["Attrition"] in [0, 1]
+
+
+if __name__ == "__main__":
+    test_predictorClass()

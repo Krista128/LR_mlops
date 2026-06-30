@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Latest predictions</h1>
+        <p>Human-readable view of recent rows from the history table.</p>
+    </div>
+    <form class="limit-form" method="get" action="/history">
+        <label>Rows
+            <select name="limit" onchange="this.form.submit()">
+                {% for value in [10, 50, 100, 500] %}
+                    <option value="{{ value }}" {% if value == limit %}selected{% endif %}>{{ value }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </form>
+</section>
+
+{% if error %}
+<div class="alert error">{{ error }}</div>
+{% endif %}
+
+{% if rows %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                {% for key in rows[0].keys() %}
+                    <th>{{ key }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+                <tr>
+                    {% for value in row.values() %}
+                        <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty">No prediction history yet.</div>
+{% endif %}
+{% endblock %}

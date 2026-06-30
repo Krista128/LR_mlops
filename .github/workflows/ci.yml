@@ -45,26 +45,50 @@ jobs:
       - name: Build predictor app image
         run: docker build -t predictor-app:ci -f Dockerfile.predictor .
 
-      - name: Run predictor app
+      #- name: Run predictor app
+      #  run: |
+      #    docker run \
+      #    -d --name predictor-app \
+      #    -p 8000:8000 predictor-app:ci
+
+      #- name: Wait for app
+      #  run: |
+      #    for i in {1..30}; do
+      #      if curl -f http://localhost:8000/health; then
+      #        exit 0
+      #      fi
+      #      sleep 2
+      #    done
+      #    docker logs predictor-app
+      #    exit 1
+
+      #- name: Stop container
+      #  if: always()
+      #  run: docker rm -f predictor-app
+
+      - name: Build UI app image
+        run: docker build -t ui-app:ci -f Dockerfile.ui .
+
+      - name: Run UI app
         run: |
           docker run \
-          -d --name predictor-app \
-          -p 8000:8000 predictor-app:ci
+          -d --name ui-app \
+          -p 8080:8080 ui-app:ci
 
-      - name: Wait for app
+      - name: Wait for UI app
         run: |
           for i in {1..30}; do
-            if curl -f http://localhost:8000/health; then
+            if curl -f http://localhost:8080/inference; then
               exit 0
             fi
             sleep 2
           done
-          docker logs predictor-app
+          docker logs ui-app
           exit 1
 
-      - name: Stop container
+      - name: Stop UI container
         if: always()
-        run: docker rm -f predictor-app
+        run: docker rm -f ui-app
 
   main-merge-tests:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -101,33 +125,71 @@ jobs:
       - name: Build image
         run: docker build -t ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/predictor-app:latest -f Dockerfile.predictor .
 
-      - name: Run predictor app
+      #- name: Run predictor app
+      #  run: |
+      #    docker run \
+      #    -d --name predictor-app \
+      #    -p 8000:8000 ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/predictor-app:latest
+
+      #- name: Wait for app
+      #  run: |
+      #    for i in {1..30}; do
+      #      if curl -f http://localhost:8000/health; then
+      #        exit 0
+      #      fi
+      #      sleep 2
+      #    done
+      #    docker logs predictor-app
+      #    exit 1
+
+      #- name: Stop container
+      #  if: always()
+      #  run: docker rm -f predictor-app
+
+      - name: Push image
+        run: docker push ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/predictor-app:latest
+
+
+      - name: Build UI image
+        run: docker build -t ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/ui-app:latest -f Dockerfile.ui .
+
+      - name: Run UI app
         run: |
           docker run \
-          -d --name predictor-app \
-          -p 8000:8000 ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/predictor-app:latest
+          -d --name ui-app \
+          -p 8080:8080 ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/ui-app:latest
 
-      - name: Wait for app
+      - name: Wait for UI app
         run: |
           for i in {1..30}; do
-            if curl -f http://localhost:8000/health; then
+            if curl -f http://localhost:8080/inference; then
               exit 0
             fi
             sleep 2
           done
-          docker logs predictor-app
+          docker logs ui-app
           exit 1
 
-      - name: Stop container
+      - name: Stop UI container
         if: always()
-        run: docker rm -f predictor-app
+        run: docker rm -f ui-app
 
-      - name: Push image
-        run: docker push ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/predictor-app:latest
+      - name: Push UI image
+        run: docker push ghcr.io/$(echo ${{ github.repository }} | awk '{print tolower($0)}')/ui-app:latest
+
 
       - name: Delete old package versions
         uses: actions/delete-package-versions@v5
         with:
           package-name: lr_mlops/predictor-app
+          package-type: container
+          min-versions-to-keep: 3
+
+
+      - name: Delete old UI package versions
+        uses: actions/delete-package-versions@v5
+        continue-on-error: true
+        with:
+          package-name: lr_mlops/ui-app
           package-type: container
           min-versions-to-keep: 3

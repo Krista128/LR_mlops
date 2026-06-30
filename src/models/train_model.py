@@ -45,7 +45,10 @@ def get_git_info() -> dict[str, str]:
 
 
 def verify_model(
-    model: Pipeline | BaseEstimator, x_test: pd.DataFrame, y_test: pd.DataFrame
+    model: Pipeline | BaseEstimator,
+    x_test: pd.DataFrame,
+    y_test: pd.DataFrame,
+    verbose: bool = True,
 ) -> dict[str, float]:
     """
     evaluate model on given x_test dataset
@@ -61,8 +64,8 @@ def verify_model(
         / (precision[:-1] + recall[:-1] + 1e-10)
     )
     best_threshold = thresholds[np.argmax(f1_scores)]
-
-    print(f"Оптимальный порог по f1-score: {best_threshold:.4f}")
+    if verbose:
+        print(f"Оптимальный порог по f1-score: {best_threshold:.4f}")
 
     pred_binary = (pred_proba >= best_threshold).astype(int)
 
@@ -72,11 +75,11 @@ def verify_model(
     roc_auc = roc_auc_score(y_test, pred_proba)
     pr_auc = average_precision_score(y_test, pred_proba)
     conf_matrix = confusion_matrix(y_test, pred_binary)
-
-    print(f"F1 Score: {f1}")
-    print(f"ROC AUC: {roc_auc}")
-    print(f"PR AUC: {pr_auc}")
-    print(f"Confusion matrix: \n {conf_matrix}")
+    if verbose:
+        print(f"F1 Score: {f1}")
+        print(f"ROC AUC: {roc_auc}")
+        print(f"PR AUC: {pr_auc}")
+        print(f"Confusion matrix: \n {conf_matrix}")
 
     return {
         "f1_Score": f1,
@@ -183,7 +186,7 @@ def train_model(
     experiment_name: str,
     repeats: int = 1,
     **params_to_log,
-):
+) -> str:
     """
     models: must be an iterable object of models to train
 
@@ -229,13 +232,14 @@ def train_model(
                     mlflow.log_metric(param, metrics_to_log[param])
 
                 for param in params_to_log:
-                    mlflow.log_param(param, params_to_log[param])
+                    mlflow.set_tag(param, params_to_log[param])
 
                 mlflow.log_params(model.get_params())
 
     with mlflow.start_run(run_id=best_run_id):
         mlflow.sklearn.log_model(best_model, name="model")
         mlflow.set_tag("model_saved", True)
+    return best_run_id
 
 
 @click.command()

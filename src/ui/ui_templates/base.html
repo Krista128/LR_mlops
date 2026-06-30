@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand">Attrition UI</div>
+        <nav>
+            <a class="nav-link {% if active == 'inference' %}active{% endif %}" href="/inference">Inference</a>
+            <a class="nav-link {% if active == 'history' %}active{% endif %}" href="/history">Predictions</a>
+            <a class="nav-link {% if active == 'drift' %}active{% endif %}" href="/drift">Drift</a>
+            <a class="nav-link {% if active == 'tools' %}active{% endif %}" href="/tools">Monitoring & experiments</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: empl-attr
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: "predictor-pods"
+        metrics_path: /metrics
+        
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - empl-attr
+
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: predictor-service
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-deployment
+  namespace: empl-attr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+
+  template:
+    metadata:
+      labels:
+        app: prometheus
+
+    spec:
+      serviceAccountName: prometheus
+
+      volumes:
+      - name: prometheus-data
+        hostPath:
+          path: /mnt/storage/prometheus
+          type: DirectoryOrCreate
+
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+
+      containers:
+        - name: prometheus
+          image: prom/prometheus:latest
+
+          ports:
+            - containerPort: 9090
+
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus
+
+            - name: prometheus-data
+              mountPath: /prometheus
+              readOnly: false
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: empl-attr
+spec:
+  selector:
+    app: prometheus
+
+  ports:
+    - port: 9090
+      targetPort: 9090
+
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: empl-attr
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-pod-reader
+  namespace: empl-attr
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - endpoints
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-pod-reader-binding
+  namespace: empl-attr
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: empl-attr
+roleRef:
+  kind: Role
+  name: prometheus-pod-reader
+  apiGroup: rbac.authorization.k8s.io
