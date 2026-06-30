@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Employee attrition inference</h1>
+        <p>Fill in employee profile fields and send them to the predictor service.</p>
+    </div>
+    <div class="status-card">
+        <div><span class="muted">Predictor:</span> {{ predictor_health.status }}</div>
+        <div><span class="muted">Run:</span> {{ predictor_health.run_id or "not loaded" }}</div>
+        <div><span class="muted">Database:</span> {{ db_status }}</div>
+    </div>
+</section>
+
+{% if error %}
+<div class="alert error">{{ error }}</div>
+{% endif %}
+
+{% if result %}
+<div class="result-card">
+    <div class="result-main">{{ result["Prediction"] }}</div>
+    <div class="muted">Saved case ID: {{ result["Case ID"] }}</div>
+</div>
+{% endif %}
+
+<form class="form-grid" method="post" action="/inference">
+    {% for field in fields %}
+    <label class="field-card">
+        <span>{{ field.label }}</span>
+        {% if field.type == "select" %}
+            <select name="{{ field.name }}" required>
+                {% for option in field.options %}
+                    <option value="{{ option }}" {% if option == field.default %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        {% else %}
+            <input
+                type="number"
+                name="{{ field.name }}"
+                value="{{ field.default }}"
+                {% if field.min is defined %}min="{{ field.min }}"{% endif %}
+                {% if field.max is defined %}max="{{ field.max }}"{% endif %}
+                required
+            >
+        {% endif %}
+    </label>
+    {% endfor %}
+
+    <div class="form-actions">
+        <button type="submit">Predict attrition</button>
+    </div>
+</form>
+{% endblock %}

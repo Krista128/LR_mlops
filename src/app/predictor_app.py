@@ -114,7 +114,7 @@ def main():
         status = "alive, in testing mode"
         predictor = test_model()
         run_id = "-100"
-
+    
     host = os.getenv("DB_HOST")
     db_name = os.getenv("POSTGRES_DB")
     user = os.getenv("POSTGRES_USER")

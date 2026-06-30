@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Monitoring & experiments</h1>
+        <p>One UI entry point for service health, Grafana monitoring and MLflow experiments.</p>
+    </div>
+</section>
+
+<div class="cards-grid">
+    <article class="tool-card">
+        <h2>Predictor service</h2>
+        <p><span class="muted">Status:</span> {{ predictor_health.status }}</p>
+        <p><span class="muted">Current model run:</span> {{ predictor_health.run_id or "not loaded" }}</p>
+    </article>
+
+    <article class="tool-card">
+        <h2>Database</h2>
+        <p><span class="muted">Status:</span> {{ db_status }}</p>
+        <p>History and drift tables are read directly from Postgres inside the cluster.</p>
+    </article>
+
+    <article class="tool-card">
+        <h2>Grafana</h2>
+        <p>Open the monitoring dashboard through the UI proxy.</p>
+        <a class="button-link" href="{{ grafana_proxy_url }}" target="_blank">Open Grafana</a>
+    </article>
+
+    <article class="tool-card">
+        <h2>MLflow</h2>
+        <p>Open experiments and registered runs through the UI proxy.</p>
+        <a class="button-link" href="{{ mlflow_proxy_url }}" target="_blank">Open MLflow</a>
+    </article>
+</div>
+
+<div class="alert info">
+    If Grafana or MLflow redirects to a root path, configure that service for subpath serving or temporarily port-forward it directly. The main UI pages do not depend on this proxy.
+</div>
+{% endblock %}

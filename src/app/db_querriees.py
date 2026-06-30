@@ -157,7 +157,7 @@ class db_connector:
     def get_unseen_requests(self):
         with self.engine.begin() as conn:
             result = conn.execute(text("""
-                SELECT 
+                SELECT
                     row_id,
                     model_train_run_id,
                     age AS "Age",
@@ -297,7 +297,7 @@ class db_connector:
                 SELECT
                     gt_labels.row_id AS row_id,
                     model_train_run_id,
-                    pipeline_shema_version,                   
+                    pipeline_shema_version,
                     age AS "Age",
                     attrition AS "Attrition",
                     businesstravel AS "BusinessTravel",
@@ -386,7 +386,7 @@ class db_connector:
         trained: bool = None,
     ):
         with self.engine.begin() as conn:
-            result = conn.execute(
+            conn.execute(
                 text("""
                 UPDATE drift
                 SET

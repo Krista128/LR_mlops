@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: empl-attr
+  name: ui-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ui
+  template:
+    metadata:
+      labels:
+        app: ui
+    spec:
+      containers:
+        - name: ui
+          #image: ghcr.io/krista128/lr_mlops/ui-app:latest
+          image: ui-app:local
+          imagePullPolicy: Never
+          #imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: postgres-info
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PREDICTOR_API_URL
+              value: "http://predictor-service:8000"
+            - name: MLFLOW_URL
+              value: "http://mlflow-service:5000"
+            - name: GRAFANA_URL
+              value: "http://grafana-service:3000"
+            - name: APP_TITLE
+              value: "Employee Attrition UI"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: empl-attr
+  name: ui-service
+spec:
+  type: ClusterIP
+  selector:
+    app: ui
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
